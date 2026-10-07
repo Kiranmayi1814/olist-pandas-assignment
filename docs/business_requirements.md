@@ -1,90 +1,77 @@
-# Business Requirements Document
+# Business Requirements
 
-## Problem 1: Finance – Sales by Category
+## Problem 1 - Finance
 
-**Business need:**
-The Finance team wants reliable sales figures to understand how product sales change over time.
+| Field | Answer |
+|---|---|
+| Business problem | Finance gets different sales numbers from different people |
+| Business user | Finance team |
+| Business question | How is item sales value changing across product categories over time? |
+| Metric | Item sales value = `SUM(order_items.price)` |
+| Other metric | Distinct orders = `COUNT(DISTINCT order_id)` per month + category |
+| Extra metric (justified) | Items sold = `COUNT(*)` of order items (one order can have many items) |
+| Time definition | Month of `order_purchase_timestamp` |
+| Included records | Items of orders that are not `canceled` or `unavailable` |
+| Excluded records | Items of `canceled` and `unavailable` orders (549 items) |
+| Missing-value treatment | Missing category is kept and shown as `unknown` |
+| Expected final grain | One row = one product category in one purchase month |
+| Assumptions | One order item row = one item sold |
+| | `price` = sales value |
+| | Freight is a delivery charge, so it is NOT included |
+| | Category names stay in the original language |
+| | Distinct orders must NOT be added across categories (one order can be in many categories) |
 
-**User:**
-Finance Team
-
-**Main question:**
-How does the value of products sold change by category each month?
-
-**Measures:**
-
-* **Sales Value:** Sum of `order_items.price`.
-* **Orders:** Count of unique orders.
-* **Items Sold:** Number of order item records.
-* Freight charges are not included in sales value.
-
-**Time period:**
-Sales are grouped by month using `order_purchase_timestamp`.
-
-**Data included:**
-Order items linked to orders that are not `canceled` or `unavailable`.
-
-**Data excluded:**
-Items from `canceled` and `unavailable` orders.
-
-**Missing values:**
-Products without a category are kept and shown as **Unknown** in the staging data.
-
-**Final level of detail:**
-One record represents one **product category for one purchase month**.
-
-**Key assumptions:**
-
-* Each order item row represents one item line.
-* Product price is treated as the sales value.
-* Freight is treated as a delivery charge, not product sales.
-* Category names remain in their original language.
+### Finance thinking questions
+1. **Grain of curated table?** One category for one month.
+2. **What is sales_value?** Sum of item `price`. No freight.
+3. **Which timestamp gives the month?** `order_purchase_timestamp`.
+4. **Which records are excluded?** `canceled` and `unavailable` orders.
+5. **Can one order give many rows in staging 1?** Yes. One order has many items.
+6. **How to avoid counting an order many times?** Use `COUNT(DISTINCT order_id)`.
+7. **Products with no category?** Keep them. Label = `unknown`. 1,589 items.
+8. **How to prove curated total = CLEAN total?** Recalculate from CLEAN with the same rules. Compare totals and every row.
 
 ---
 
-## Problem 2: Operations – Delivery Performance
+## Problem 2 - Operations
 
-**Business need:**
-The Operations team wants to monitor delivery performance and identify areas with late deliveries.
+| Field | Answer |
+|---|---|
+| Business problem | Operations cannot see where deliveries are late |
+| Business user | Operations team |
+| Business question | How is delivery performance changing, and where are late deliveries occurring? |
+| Metric - Total orders | All orders in the month + state |
+| Metric - Delivered orders | Status `delivered` AND delivery date is not empty |
+| Metric - Late orders | Delivery date is after estimated date |
+| Metric - Late delivery rate | Late orders / delivered orders |
+| Time definition | Month of `order_purchase_timestamp` |
+| Location | `customer_state` |
+| Included records | All orders (for total orders) |
+| Excluded records | Orders without a delivery result are not used in delivered or late |
+| Missing-value treatment | No delivery date = not delivered (never late, never on time) |
+| | Delivered but date empty = `unknown` |
+| | Rate is empty (NULL) when delivered orders = 0 |
+| Expected final grain | One row = one customer state in one purchase month |
+| Assumptions | One order = one row (not one item) |
+| | Dates are compared as dates, not times |
 
-**User:**
-Operations Team
+### Delivery rules
+| Case | Class |
+|---|---|
+| Status `canceled` or `unavailable` | `not_fulfilled` |
+| Status `delivered`, delivery date empty | `unknown` |
+| Delivered date > estimated date | `late` |
+| Delivered date <= estimated date | `on_time` |
+| Any other status (shipped, processing...) | `not_delivered` |
 
-**Main question:**
-How does delivery performance change over time, and which customer states have more late deliveries?
+### Boundary rules
+- Same day (actual = estimated) -> `on_time`
+- Before estimated date -> `on_time`
+- After estimated date -> `late`
+- Delivery date empty -> never `late`
+- Canceled orders are never `late`
 
-**Measures:**
-
-* **Total Orders:** All orders in the period.
-* **Delivered Orders:** Orders with a valid delivery result.
-* **Late Orders:** Orders delivered after the estimated date.
-* **Late Delivery Rate:** Late orders divided by delivered orders.
-
-**Time period:**
-Orders are grouped by month using `order_purchase_timestamp`.
-
-**Delivery rule:**
-An order is **Late** when `order_delivered_customer_date` is later than `order_estimated_delivery_date`.
-If both dates are the same, the order is **On-time**.
-
-**Data included:**
-All orders are included for the total order count. Only orders with a reliable delivery outcome are used for delivered and late calculations.
-
-**Data excluded from late calculation:**
-Canceled, unavailable, in-progress, and orders without a valid delivery date are not counted as late.
-
-**Missing values:**
-A delivered order with no delivery date is treated as **Unknown**, not Late.
-
-**Location:**
-Customer state (`customer_state`).
-
-**Final level of detail:**
-One record represents one **customer state for one purchase month**.
-
-**Key assumptions:**
-
-* The estimated date represents the expected delivery date.
-* Customer state represents the delivery destination.
-* Purchase month is used to track the order cohort.
-* Late delivery rate is calculated only from orders with a known delivery outcome.
+### Why these choices
+- The metric is about orders, so grain = order.
+- Orders are not counted twice, because order items are not used.
+- Late rate uses delivered orders only, so unfinished orders do not hide late ones.
