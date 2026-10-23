@@ -1,7 +1,5 @@
+venv/
 .venv/
 __pycache__/
 .ipynb_checkpoints/
-.env
-output/
-hadoop/
-
+*.pyc
