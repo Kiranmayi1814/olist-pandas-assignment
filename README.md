@@ -200,3 +200,32 @@ SQL reference copy: `sql/optional_sql_notes.sql`
 * `reviews.order_id` → `orders.order_id`
 
 The CLEAN layer uses these relationships to support the Finance and Operations pipelines.
+
+# Assignment 4 – Spark Fundamentals
+
+## About the Project
+In this project, I used PySpark to work with the Olist e-commerce dataset. I learned how Spark processes data and how it handles large datasets efficiently.
+
+## What I Did
+- Loaded CSV files into Spark DataFrames.
+- Checked data types and row counts.
+- Used filters, joins, and groupBy operations.
+- Learned how Spark executes transformations and actions.
+- Tested caching and partitioning.
+- Saved results in Parquet format.
+- Completed Finance and Operations analysis.
+- Compared the results with Assignment 3.
+- Explored the Spark UI to understand job execution.
+
+## How to Run
+Install the required packages and open the notebook:
+
+```bash
+python -m pip install -r requirements.txt
+jupyter lab
+```
+
+Open `notebooks/assignment_4_spark.ipynb` and run the cells one by one.
+
+## Conclusion
+This assignment helped me understand the basics of PySpark, how data processing works in Spark, and how to improve performance using caching and partitioning.
