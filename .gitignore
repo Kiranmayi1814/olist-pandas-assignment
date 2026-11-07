@@ -1,0 +1,10 @@
+venv/
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+*.pyc
+.env
+data/
+Assignment5/data/
+Assignment5/starter/output/
+output/

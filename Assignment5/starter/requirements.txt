@@ -1,0 +1,6 @@
+# Java 17 or newer must be installed separately (check with: java -version).
+pyspark==4.2.0
+pyarrow>=17
+pandas>=2.2,<3
+numpy>=1.26,<2.4
+ipykernel
